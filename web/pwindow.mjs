@@ -174,7 +174,8 @@ class InventoryManager {
           this.win.needsUpdate = true
         }
       } else if (item) { // pickup item
-        reactive.floatingItem = { ...item }
+        if (!item.texture) throw new Error('Item has no texture', item)
+        reactive.floatingItem = JSON.parse(JSON.stringify(item))
         this.setSlot(inventoryIndex, null)
         this.setCursorItem(inventoryIndex, item.count)
       }
