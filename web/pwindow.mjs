@@ -164,7 +164,7 @@ class InventoryManager {
             const old = this.inv.slots[inventoryIndex]
             this.setSlot(inventoryIndex, reactive.floatingItem)
             this.setCursorItem(inventoryIndex, old.count)
-            reactive.floatingItem = old
+            reactive.floatingItem = JSON.parse(JSON.stringify(old))
             this.win.needsUpdate = true
           }
         } else {
@@ -200,13 +200,13 @@ class InventoryManager {
           slot.count++
         } else {
           this.setSlot(inventoryIndex, floating)
-          reactive.floatingItem = {...slot}
+          reactive.floatingItem = JSON.parse(JSON.stringify(slot))
         }
       } else {
         floating.count--
       }
     } else if (slot) {
-      reactive.floatingItem = {...slot}
+      reactive.floatingItem = JSON.parse(JSON.stringify(slot))
       reactive.floatingItem.count = initialCount - Math.floor(slot.count / 2)
       this.setCursorItem(inventoryIndex, reactive.floatingItem.count)
       this.setSlot(inventoryIndex, slot.count ? slot : null)
