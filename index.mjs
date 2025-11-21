@@ -18,6 +18,8 @@ export {
   HorseWin,
   BeaconWin,
   Generic95Win,
+  SmithingTableWin,
+  SmithingTableLegacyWin,
 
   VillagerWin,
   HotbarWin
