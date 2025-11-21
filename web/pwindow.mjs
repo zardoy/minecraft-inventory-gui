@@ -19,6 +19,12 @@ class InventoryManager {
     // Store cleanup function for event listeners
     this._cleanupListeners = []
 
+    // Track furnace/crafting progress totals and current values
+    this._totalFuel = 0
+    this._totalProgress = 0
+    this._currentFuel = 0
+    this._currentProgress = 0
+
     win.on('itemEvent', (id, type, pos, data) => {
       // console.log('itemEvent', id, type, pos, data)
       if (type === 'release') {
@@ -43,35 +49,64 @@ class InventoryManager {
     })
 
     // Listen for craft_progress_bar events (furnace, smoker, blast furnace, etc.)
-    if (bot && bot.client) {
+    if (bot && bot._client) {
       const craftProgressHandler = ({ windowId, property, value }) => {
         const currentWindow = bot.currentWindow ?? bot.inventory
         // Check if this event is for the current window
         if (currentWindow && currentWindow.id === windowId) {
-          // Property 0: Fuel progress (0-1600 max)
-          // Property 2: Crafting progress arrow (0-200 max)
-          if (property === 0) {
-            // Fuel progress - convert to litProgress scale (0-12 for drawing, but can go up to 16)
-            // The value is 0-1600, we scale it to 0-12 for the fuel bar height
-            if (this.win.litProgress !== undefined) {
-              this.win.litProgress = Math.floor((value / 1600) * 12)
-              this.win.needsUpdate = true
-            }
-          } else if (property === 2) {
-            // Crafting progress - convert to burnProgress scale (0-22)
-            // The value is 0-200, we scale it to 0-22 for the progress bar width
-            if (this.win.burnProgress !== undefined) {
-              this.win.burnProgress = Math.floor((value / 200) * 22)
-              this.win.needsUpdate = true
-            }
+          switch (property) {
+            case 0: // Current fuel (value is current, need totalFuel to calculate ratio)
+              this._currentFuel = value
+              if (this.win.litProgress !== undefined && this._totalFuel > 0) {
+                const fuelRatio = value / this._totalFuel
+                // Scale ratio (0-1) to litProgress scale (0-12)
+                this.win.litProgress = Math.floor(fuelRatio * 12)
+                this.win.needsUpdate = true
+              } else if (this.win.litProgress !== undefined) {
+                // No total yet, set to 0
+                this.win.litProgress = 0
+                this.win.needsUpdate = true
+              }
+              break
+            case 1: // Total fuel (max value, e.g., 1600)
+              this._totalFuel = value
+              // Recalculate fuel progress if we have current fuel value
+              if (this.win.litProgress !== undefined && value > 0 && this._currentFuel >= 0) {
+                const fuelRatio = this._currentFuel / value
+                this.win.litProgress = Math.floor(fuelRatio * 12)
+                this.win.needsUpdate = true
+              }
+              break
+            case 2: // Current progress (value is current, need totalProgress to calculate ratio)
+              this._currentProgress = value
+              if (this.win.burnProgress !== undefined && this._totalProgress > 0) {
+                const progressRatio = value / this._totalProgress
+                // Scale ratio (0-1) to burnProgress scale (0-22)
+                this.win.burnProgress = Math.floor(progressRatio * 22)
+                this.win.needsUpdate = true
+              } else if (this.win.burnProgress !== undefined) {
+                // No total yet, set to 0
+                this.win.burnProgress = 0
+                this.win.needsUpdate = true
+              }
+              break
+            case 3: // Total progress (max value, e.g., 200)
+              this._totalProgress = value
+              // Recalculate progress if we have current progress value
+              if (this.win.burnProgress !== undefined && value > 0 && this._currentProgress >= 0) {
+                const progressRatio = this._currentProgress / value
+                this.win.burnProgress = Math.floor(progressRatio * 22)
+                this.win.needsUpdate = true
+              }
+              break
           }
         }
       }
 
-      bot.client.on('craft_progress_bar', craftProgressHandler)
+      bot._client.on('craft_progress_bar', craftProgressHandler)
       this._cleanupListeners.push(() => {
-        if (bot && bot.client) {
-          bot.client.removeListener('craft_progress_bar', craftProgressHandler)
+        if (bot && bot._client) {
+          bot._client.removeListener('craft_progress_bar', craftProgressHandler)
         }
       })
     }
@@ -126,7 +161,7 @@ class InventoryManager {
 
   botClickWindow(slotIndex, mouseButton, mode) {
     if (!this.bot) return
-    const oldClientWrite = this.bot._client.write.bind(this.bot.client)
+    const oldClientWrite = this.bot._client.write.bind(this.bot._client)
     this.bot._client.write = (name, params) => {
       if (name === 'clickWindow' && this.win.reactive.floatingItem) {
         params.cursorItem = PrismarineItem.toNotch(this.win.reactive.floatingItem)
