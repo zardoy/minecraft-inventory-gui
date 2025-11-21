@@ -16,6 +16,9 @@ class InventoryManager {
     this.renderItems()
     this.disablePicking = false
 
+    // Store cleanup function for event listeners
+    this._cleanupListeners = []
+
     win.on('itemEvent', (id, type, pos, data) => {
       // console.log('itemEvent', id, type, pos, data)
       if (type === 'release') {
@@ -38,6 +41,48 @@ class InventoryManager {
         this.onInventoryEvent(type, containing, index, slotIndex, item)
       }
     })
+
+    // Listen for craft_progress_bar events (furnace, smoker, blast furnace, etc.)
+    if (bot && bot.client) {
+      const craftProgressHandler = ({ windowId, property, value }) => {
+        const currentWindow = bot.currentWindow ?? bot.inventory
+        // Check if this event is for the current window
+        if (currentWindow && currentWindow.id === windowId) {
+          // Property 0: Fuel progress (0-1600 max)
+          // Property 2: Crafting progress arrow (0-200 max)
+          if (property === 0) {
+            // Fuel progress - convert to litProgress scale (0-12 for drawing, but can go up to 16)
+            // The value is 0-1600, we scale it to 0-12 for the fuel bar height
+            if (this.win.litProgress !== undefined) {
+              this.win.litProgress = Math.floor((value / 1600) * 12)
+              this.win.needsUpdate = true
+            }
+          } else if (property === 2) {
+            // Crafting progress - convert to burnProgress scale (0-22)
+            // The value is 0-200, we scale it to 0-22 for the progress bar width
+            if (this.win.burnProgress !== undefined) {
+              this.win.burnProgress = Math.floor((value / 200) * 22)
+              this.win.needsUpdate = true
+            }
+          }
+        }
+      }
+
+      bot.client.on('craft_progress_bar', craftProgressHandler)
+      this._cleanupListeners.push(() => {
+        if (bot && bot.client) {
+          bot.client.removeListener('craft_progress_bar', craftProgressHandler)
+        }
+      })
+    }
+  }
+
+  // Cleanup method to remove event listeners
+  destroy () {
+    for (const cleanup of this._cleanupListeners) {
+      cleanup()
+    }
+    this._cleanupListeners = []
   }
 
   setSlots (items) {

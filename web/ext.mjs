@@ -27,6 +27,9 @@ export const showInventory = (type = 'PlayerWin', getImage, itemsReactive, bot) 
         pwindow,
         canvas,
         destroy() {
+            if (pwindow && typeof pwindow.destroy === 'function') {
+                pwindow.destroy()
+            }
             canvasManager.destroy()
         }
     }
