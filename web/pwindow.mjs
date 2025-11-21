@@ -49,7 +49,7 @@ class InventoryManager {
     })
 
     // Listen for craft_progress_bar events (furnace, smoker, blast furnace, etc.)
-    if (bot && bot._client) {
+    if (bot && bot._client?.on) {
       const craftProgressHandler = ({ windowId, property, value }) => {
         const currentWindow = bot.currentWindow ?? bot.inventory
         // Check if this event is for the current window
