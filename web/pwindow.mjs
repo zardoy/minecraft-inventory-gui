@@ -61,6 +61,7 @@ class InventoryManager {
                 const fuelRatio = value / this._totalFuel
                 // Scale ratio (0-1) to litProgress scale (0-12)
                 this.win.litProgress = Math.floor(fuelRatio * 12)
+                if (this.win.litProgress === 0) this.win.litProgress = -1
                 this.win.needsUpdate = true
               } else if (this.win.litProgress !== undefined) {
                 // No total yet, set to 0
@@ -74,6 +75,7 @@ class InventoryManager {
               if (this.win.litProgress !== undefined && value > 0 && this._currentFuel >= 0) {
                 const fuelRatio = this._currentFuel / value
                 this.win.litProgress = Math.floor(fuelRatio * 12)
+                if (this.win.litProgress === 0) this.win.litProgress = -1
                 this.win.needsUpdate = true
               }
               break
